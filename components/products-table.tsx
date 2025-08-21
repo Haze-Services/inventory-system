@@ -1,0 +1,158 @@
+"use client"
+
+import { useState } from "react"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { MoreHorizontal, Search, Plus, Edit, Trash2 } from "lucide-react"
+import type { Product } from "@/lib/types"
+
+interface ProductsTableProps {
+  products: Product[]
+  onEdit: (product: Product) => void
+  onDelete: (product: Product) => void
+  onAdd: () => void
+  loading?: boolean
+}
+
+export function ProductsTable({ products, onEdit, onDelete, onAdd, loading = false }: ProductsTableProps) {
+  const [searchTerm, setSearchTerm] = useState("")
+
+  const filteredProducts = products.filter(
+    (product) =>
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.supplier?.name.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
+
+  const getStockStatus = (product: Product) => {
+    if (product.stockQuantity <= 0) return { label: "Out of Stock", variant: "destructive" as const }
+    if (product.stockQuantity <= product.minStockLevel) return { label: "Low Stock", variant: "secondary" as const }
+    return { label: "In Stock", variant: "default" as const }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <div className="w-64 h-10 bg-muted animate-pulse rounded"></div>
+          <div className="w-32 h-10 bg-muted animate-pulse rounded"></div>
+        </div>
+        <div className="border rounded-lg">
+          <div className="h-64 bg-muted animate-pulse rounded-lg"></div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div className="relative w-64">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Button onClick={onAdd}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Product
+        </Button>
+      </div>
+
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Product</TableHead>
+              <TableHead>SKU</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Supplier</TableHead>
+              <TableHead>Purchase Price</TableHead>
+              <TableHead>Selling Price</TableHead>
+              <TableHead>Profit</TableHead>
+              <TableHead>Stock</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredProducts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                  {searchTerm
+                    ? "No products found matching your search."
+                    : "No products found. Add your first product to get started."}
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredProducts.map((product) => {
+                const stockStatus = getStockStatus(product)
+                return (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{product.name}</div>
+                        {product.description && (
+                          <div className="text-sm text-muted-foreground truncate max-w-[200px]">
+                            {product.description}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">{product.sku}</TableCell>
+                    <TableCell>{product.category?.name || "—"}</TableCell>
+                    <TableCell>{product.supplier?.name || "—"}</TableCell>
+                    <TableCell>${product.purchasePrice.toFixed(2)}</TableCell>
+                    <TableCell>${product.sellingPrice.toFixed(2)}</TableCell>
+                    <TableCell className="text-green-600 font-medium">${product.totalProfit.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div>{product.stockQuantity} units</div>
+                        <div className="text-muted-foreground">Min: {product.minStockLevel}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={stockStatus.variant}>{stockStatus.label}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onEdit(product)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => onDelete(product)} className="text-destructive">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                )
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {filteredProducts.length > 0 && (
+        <div className="text-sm text-muted-foreground">
+          Showing {filteredProducts.length} of {products.length} products
+        </div>
+      )}
+    </div>
+  )
+}
