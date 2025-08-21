@@ -38,3 +38,38 @@ A modern inventory management system built with Next.js, TypeScript, and Tailwin
 git clone https://github.com/yourusername/inventory-system.git
 cd inventory-system
 ```
+
+2. **Install dependencies**
+
+```bash
+npm install
+# or
+yarn install
+```
+
+3. **Set up environment variables**
+
+Create a `.env.local` file in the root directory and add your environment variables:
+
+```env
+DATABASE_URL=your_database_connection_string
+# Add other required environment variables
+```
+
+4. **Run the development server**
+
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+## Available Scripts
+
+- `npm run dev` - Runs the development server
+- `npm run build` - Builds the application for production
+- `npm start` - Starts the production server
+- `npm run lint` - Runs the linter
+- `npm test` - Runs the test suite
