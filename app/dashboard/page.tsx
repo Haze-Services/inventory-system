@@ -61,13 +61,10 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-6">
-            {/* Stats Cards */}
             <DashboardStats products={products} />
 
-            {/* Charts */}
             <InventoryChart products={products} />
 
-            {/* Alerts and Activity */}
             <div className="grid gap-4 md:grid-cols-2">
               <LowStockAlerts products={products} />
               <RecentActivity products={products} />

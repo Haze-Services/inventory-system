@@ -115,13 +115,13 @@ export default function ProductsPage() {
     }
   }
 
-  const handleFormSubmit = async (productData: Omit<Product, "id" | "createdAt" | "updatedAt" | "totalProfit">) => {
+  const handleFormSubmit = async (productData: Omit<Product, "id" | "created_at" | "updated_at" | "total_profit">) => {
     try {
       setFormLoading(true)
       if (editingProduct) {
         const response = await apiClient.updateProduct(editingProduct.id, productData)
         if (response.success && response.data) {
-          setProducts((prev) => prev.map((p) => (p.id === editingProduct.id ? response.data : p)))
+          setProducts((prev) => prev.map((p) => (p.id === editingProduct.id ? response.data : p)) as Product[])
           toast({
             title: "Success",
             description: "Product updated successfully",
@@ -132,7 +132,7 @@ export default function ProductsPage() {
       } else {
         const response = await apiClient.createProduct(productData)
         if (response.success && response.data) {
-          setProducts((prev) => [...prev, response.data])
+          setProducts((prev) => [...prev, response.data] as Product[])
           toast({
             title: "Success",
             description: "Product created successfully",
@@ -143,11 +143,11 @@ export default function ProductsPage() {
       }
       setShowForm(false)
       setEditingProduct(null)
-      loadFilterOptions()
+      loadProducts(currentFilters) // Reload with current filters instead of just loadFilterOptions
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to save product",
+        description: error instanceof Error ? error.message : "Failed to save product",
         variant: "destructive",
       })
     } finally {

@@ -26,11 +26,11 @@ export function ProductsTable({ products, onEdit, onDelete, onAdd, loading = fal
       product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.category?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.supplier?.name.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  ) as Product[]
 
   const getStockStatus = (product: Product) => {
-    if (product.stockQuantity <= 0) return { label: "Out of Stock", variant: "destructive" as const }
-    if (product.stockQuantity <= product.minStockLevel) return { label: "Low Stock", variant: "secondary" as const }
+    if (product.stock_quantity <= 0) return { label: "Out of Stock", variant: "destructive" as const }
+    if (product.stock_quantity <= product.min_stock_level) return { label: "Low Stock", variant: "secondary" as const }
     return { label: "In Stock", variant: "default" as const }
   }
 
@@ -109,12 +109,14 @@ export function ProductsTable({ products, onEdit, onDelete, onAdd, loading = fal
                     <TableCell className="font-mono text-sm">{product.sku}</TableCell>
                     <TableCell>{product.category?.name || "—"}</TableCell>
                     <TableCell>{product.supplier?.name || "—"}</TableCell>
-                    <TableCell>${product.purchasePrice.toFixed(2)}</TableCell>
-                    <TableCell>${product.sellingPrice.toFixed(2)}</TableCell>
-                    <TableCell className="text-green-600 font-medium">${product.totalProfit.toFixed(2)}</TableCell>
+                    <TableCell>${(product.purchase_price || 0).toFixed(2)}</TableCell>
+                    <TableCell>${(product.selling_price || 0).toFixed(2)}</TableCell>
+                    <TableCell className="text-green-600 font-medium">
+                      ${product.total_profit?.toFixed(2) ?? ((product.selling_price || 0) - (product.purchase_price || 0)).toFixed(2)}
+                    </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        <div>{product.stockQuantity} units</div>
+                        <div>{product.stock_quantity} units</div>
                         <div className="text-muted-foreground">Min: {product.minStockLevel}</div>
                       </div>
                     </TableCell>

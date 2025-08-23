@@ -1,3 +1,5 @@
+import { Category, Product, Supplier } from "./types"
+
 interface ApiResponse<T> {
   success: boolean
   data?: T
@@ -48,7 +50,7 @@ class ApiClient {
   }
 
   // Product endpoints
-  async getProducts(filters?: ProductFilters) {
+  async getProducts(filters?: ProductFilters): Promise<ApiResponse<Product[]>> {
     const params = new URLSearchParams()
 
     if (filters?.search) params.append("search", filters.search)
@@ -89,6 +91,15 @@ class ApiClient {
     return this.request(`/products/${id}`, {
       method: "DELETE",
     })
+  }
+
+  // New category and supplier endpoints
+  async getCategories(): Promise<ApiResponse<Category[]>> {
+    return this.request('/categories')
+  }
+
+  async getSuppliers(): Promise<ApiResponse<Supplier[]>> {
+    return this.request('/suppliers')
   }
 }
 

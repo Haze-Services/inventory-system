@@ -1,66 +1,23 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 import type { Product } from "@/lib/types"
-
-// Mock data - same as in products/route.ts (in real app, this would come from database)
-const mockProducts: Product[] = [
-  {
-    id: "1",
-    name: "Wireless Headphones",
-    sku: "WH-001",
-    description: "High-quality wireless headphones with noise cancellation",
-    category: "Electronics",
-    supplier: "TechCorp",
-    realPrice: 150.0,
-    purchasePrice: 80.0,
-    sellingPrice: 120.0,
-    priceCorrection: 0,
-    stock: 25,
-    minStock: 5,
-    maxStock: 100,
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-01-20"),
-  },
-  {
-    id: "2",
-    name: "Gaming Mouse",
-    sku: "GM-002",
-    description: "Ergonomic gaming mouse with RGB lighting",
-    category: "Electronics",
-    supplier: "GameGear",
-    realPrice: 80.0,
-    purchasePrice: 45.0,
-    sellingPrice: 65.0,
-    priceCorrection: 5.0,
-    stock: 15,
-    minStock: 3,
-    maxStock: 50,
-    createdAt: new Date("2024-01-10"),
-    updatedAt: new Date("2024-01-18"),
-  },
-  {
-    id: "3",
-    name: "Office Chair",
-    sku: "OC-003",
-    description: "Comfortable ergonomic office chair",
-    category: "Furniture",
-    supplier: "OfficeMax",
-    realPrice: 300.0,
-    purchasePrice: 180.0,
-    sellingPrice: 250.0,
-    priceCorrection: -10.0,
-    stock: 8,
-    minStock: 2,
-    maxStock: 20,
-    createdAt: new Date("2024-01-05"),
-    updatedAt: new Date("2024-01-22"),
-  },
-]
+import { supabase } from "@/lib/supabase"
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params
 
-    const product = mockProducts.find((p) => p.id === id)
+    const { data: product, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories(name),
+        supplier:suppliers(name)
+      `)
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
 
     if (!product) {
       return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 })
@@ -69,10 +26,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     // Add calculated fields
     const productWithCalculations = {
       ...product,
-      totalProfit: product.sellingPrice + product.priceCorrection - product.purchasePrice,
-      profitMargin:
-        ((product.sellingPrice + product.priceCorrection - product.purchasePrice) / product.purchasePrice) * 100,
-      finalPrice: product.sellingPrice + product.priceCorrection,
+      total_profit: product.selling_price + product.price_correction - product.purchase_price,
+      profit_margin:
+        ((product.selling_price + product.price_correction - product.purchase_price) / product.purchase_price) * 100,
+      final_price: product.selling_price + product.price_correction,
     }
 
     return NextResponse.json({
@@ -85,35 +42,87 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest) {
   try {
-    const { id } = params
-    const body = await request.json()
+    const productData = await request.json()
 
-    const productIndex = mockProducts.findIndex((p) => p.id === id)
+    // Remove any computed or read-only fields
+    delete productData.id
+    delete productData.created_at
+    delete productData.updated_at
+    delete productData.total_profit
+    delete productData.category
+    delete productData.supplier
 
-    if (productIndex === -1) {
-      return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 })
-    }
+    const { data: product, error } = await supabase
+      .from('products')
+      .insert([{
+        ...productData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single()
 
-    // Update product
-    const updatedProduct = {
-      ...mockProducts[productIndex],
-      ...body,
-      id, // Ensure ID doesn't change
-      updatedAt: new Date(),
-    }
-
-    mockProducts[productIndex] = updatedProduct
+    if (error) throw error
 
     return NextResponse.json({
       success: true,
-      data: updatedProduct,
+      data: product,
+      message: "Product created successfully"
+    })
+
+  } catch (error) {
+    console.error("Error creating product:", error)
+    const errorMessage = error instanceof Error ? error.message : "Failed to create product"
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 400 })
+  }
+}
+
+export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const { id } = params
+    const updates = await request.json()
+
+    console.log(updates)
+
+    // Remove read-only fields
+    delete updates.id
+    delete updates.created_at
+    delete updates.updated_at
+    delete updates.total_profit
+
+    const { data: product, error } = await supabase
+      .from('products')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select(`
+        *,
+        category:categories(name),
+        supplier:suppliers(name)
+      `)
+      .single()
+
+    if (error) throw error
+
+    if (!product) {
+      return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: product,
       message: "Product updated successfully",
     })
   } catch (error) {
     console.error("Error updating product:", error)
-    return NextResponse.json({ success: false, error: "Failed to update product" }, { status: 500 })
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to update product"
+    }, { status: 500 })
   }
 }
 
@@ -121,22 +130,29 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
   try {
     const { id } = params
 
-    const productIndex = mockProducts.findIndex((p) => p.id === id)
+    const { data: product, error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id)
+      .select()
+      .single()
 
-    if (productIndex === -1) {
+    if (error) throw error
+
+    if (!product) {
       return NextResponse.json({ success: false, error: "Product not found" }, { status: 404 })
     }
 
-    // Remove product
-    const deletedProduct = mockProducts.splice(productIndex, 1)[0]
-
     return NextResponse.json({
       success: true,
-      data: deletedProduct,
+      data: product,
       message: "Product deleted successfully",
     })
   } catch (error) {
     console.error("Error deleting product:", error)
-    return NextResponse.json({ success: false, error: "Failed to delete product" }, { status: 500 })
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete product"
+    }, { status: 500 })
   }
 }

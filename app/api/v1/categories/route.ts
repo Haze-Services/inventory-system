@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { mockCategories } from "@/lib/mock-data"
+import { supabase } from "@/lib/supabase"
 import type { Category } from "@/lib/types"
 
 export async function GET(request: NextRequest) {
@@ -7,21 +7,20 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search")
 
-    let categories = [...mockCategories]
+    let query = supabase.from('categories').select('*')
 
-    // Apply search filter
     if (search) {
-      categories = categories.filter(
-        (category) =>
-          category.name.toLowerCase().includes(search.toLowerCase()) ||
-          category.description?.toLowerCase().includes(search.toLowerCase()),
-      )
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
     }
+
+    const { data: categories, error, count } = await query
+
+    if (error) throw error
 
     return NextResponse.json({
       success: true,
       data: categories,
-      total: categories.length,
+      total: count,
     })
   } catch (error) {
     console.error("Error fetching categories:", error)
@@ -38,20 +37,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Category name is required" }, { status: 400 })
     }
 
-    const newCategory: Category = {
-      id: `cat_${Date.now()}`,
+    const newCategory: Partial<Category> = {
       name,
       description: description || "",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
     }
 
-    mockCategories.push(newCategory)
+    const { data, error } = await supabase
+      .from('categories')
+      .insert([newCategory])
+      .select()
+      .single()
+
+    if (error) throw error
 
     return NextResponse.json(
       {
         success: true,
-        data: newCategory,
+        data,
       },
       { status: 201 },
     )

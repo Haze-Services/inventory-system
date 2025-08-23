@@ -11,51 +11,103 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import type { Product, Category, Supplier } from "@/lib/types"
-import { categoryApi, supplierApi } from "@/lib/mock-data"
+import { apiClient } from "@/lib/api-client"
 
 interface ProductFormProps {
   product?: Product
-  onSubmit: (product: Omit<Product, "id" | "createdAt" | "updatedAt" | "totalProfit">) => Promise<void>
+  onSubmit: (product: Omit<Product, "id" | "created_at" | "updated_at" | "total_profit">) => Promise<void>
   onCancel: () => void
   loading?: boolean
 }
 
+const validateProduct = (data: any) => {
+  const errors: string[] = []
+
+  console.log("Validating product data:", data)
+
+  if (!data.name?.trim()) {
+    errors.push("Product name is required")
+  }
+
+  if (!data.sku?.trim()) {
+    errors.push("SKU is required")
+  }
+
+  if (!data.real_price || isNaN(Number(data.real_price))) {
+    errors.push("Real price is required and must be a number")
+  }
+
+  if (!data.purchase_price || isNaN(Number(data.purchase_price))) {
+    errors.push("Purchase price is required and must be a number")
+  }
+
+  if (!data.selling_price || isNaN(Number(data.selling_price))) {
+    errors.push("Selling price is required and must be a number")
+  }
+
+  if (!data.stock_quantity || isNaN(Number(data.stock_quantity))) {
+    errors.push("Stock quantity is required and must be a number")
+  }
+
+  if (!data.min_stock_level || isNaN(Number(data.min_stock_level))) {
+    errors.push("Minimum stock level is required and must be a number")
+  }
+
+  return errors
+}
+
+// Add this helper function at the top of the file
+const getCategoryIdByName = (categories: Array<{ id: string, name: string }>, name: string) => {
+  const category = categories.find(c => c.name.toLowerCase() === name.toLowerCase())
+  return category?.id || ''
+}
+
 export function ProductForm({ product, onSubmit, onCancel, loading = false }: ProductFormProps) {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [formData, setFormData] = useState({
     name: product?.name || "",
     description: product?.description || "",
     sku: product?.sku || "",
-    realPrice: product?.realPrice?.toString() || "",
-    purchasePrice: product?.purchasePrice?.toString() || "",
-    sellingPrice: product?.sellingPrice?.toString() || "",
-    priceCorrection: product?.priceCorrection?.toString() || "0",
-    stockQuantity: product?.stockQuantity?.toString() || "0",
-    minStockLevel: product?.minStockLevel?.toString() || "0",
-    maxStockLevel: product?.maxStockLevel?.toString() || "",
-    categoryId: product?.categoryId || "",
-    supplierId: product?.supplierId || "",
-    isActive: product?.isActive ?? true,
+    real_price: product?.real_price?.toString() || "",
+    purchase_price: product?.purchase_price?.toString() || "",
+    selling_price: product?.selling_price?.toString() || "",
+    price_correction: product?.price_correction?.toString() || "0",
+    stock_quantity: product?.stock_quantity?.toString() || "0",
+    min_stock_level: product?.min_stock_level?.toString() || "0",
+    max_stock_level: product?.max_stock_level?.toString() || "",
+    category_id: product?.category_id || "",
+    supplier_id: product?.supplier_id || "",
+    is_active: product?.is_active ?? true,
   })
+  const [categories, setCategories] = useState<Array<{ id: string, name: string }>>([])
+  const [suppliers, setSuppliers] = useState<Array<{ id: string, name: string }>>([])
   const [error, setError] = useState("")
 
   // Calculate total profit in real-time
   const totalProfit =
-    (Number.parseFloat(formData.sellingPrice) || 0) -
-    (Number.parseFloat(formData.purchasePrice) || 0) +
-    (Number.parseFloat(formData.priceCorrection) || 0)
+    (Number.parseFloat(formData.selling_price) || 0) -
+    (Number.parseFloat(formData.purchase_price) || 0) +
+    (Number.parseFloat(formData.price_correction) || 0)
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [categoriesData, suppliersData] = await Promise.all([categoryApi.getAll(), supplierApi.getAll()])
-        setCategories(categoriesData)
-        setSuppliers(suppliersData)
+        const categoriesResponse = await apiClient.getCategories()
+        if (categoriesResponse.success) {
+          setCategories(categoriesResponse.data as Array<{ id: string, name: string }>)
+        } else {
+          throw new Error(categoriesResponse.error || "Failed to load categories")
+        }
+
+        const suppliersResponse = await apiClient.getSuppliers()
+        if (suppliersResponse.success) {
+          setSuppliers(suppliersResponse.data as Array<{ id: string, name: string }>)
+        }
       } catch (err) {
-        setError("Failed to load categories and suppliers")
+        console.error('Error loading data:', err)
+        setError(err instanceof Error ? err.message : "Failed to load form data")
       }
     }
+
     loadData()
   }, [])
 
@@ -65,29 +117,69 @@ export function ProductForm({ product, onSubmit, onCancel, loading = false }: Pr
 
     try {
       const productData = {
-        name: formData.name,
+        name: formData.name.trim(),
         description: formData.description,
-        sku: formData.sku,
-        realPrice: Number.parseFloat(formData.realPrice),
-        purchasePrice: Number.parseFloat(formData.purchasePrice),
-        sellingPrice: Number.parseFloat(formData.sellingPrice),
-        priceCorrection: Number.parseFloat(formData.priceCorrection) || 0,
-        stockQuantity: Number.parseInt(formData.stockQuantity),
-        minStockLevel: Number.parseInt(formData.minStockLevel),
-        maxStockLevel: formData.maxStockLevel ? Number.parseInt(formData.maxStockLevel) : undefined,
-        categoryId: formData.categoryId || undefined,
-        supplierId: formData.supplierId || undefined,
-        isActive: formData.isActive,
+        sku: formData.sku.trim(),
+        real_price: Number.parseFloat(formData.real_price),
+        purchase_price: Number.parseFloat(formData.purchase_price),
+        selling_price: Number.parseFloat(formData.selling_price),
+        price_correction: Number.parseFloat(formData.price_correction) || 0,
+        stock_quantity: Number.parseInt(formData.stock_quantity),
+        min_stock_level: Number.parseInt(formData.min_stock_level),
+        max_stock_level: formData.max_stock_level ? Number.parseInt(formData.max_stock_level) : undefined,
+        category_id: formData.category_id || undefined,
+        supplier_id: formData.supplier_id || undefined,
+        is_active: formData.is_active,
+      }
+
+      // Validate before submitting
+      const validationErrors = validateProduct(productData)
+      if (validationErrors.length > 0) {
+        setError(validationErrors.join(", "))
+        return
       }
 
       await onSubmit(productData)
     } catch (err) {
-      setError("Failed to save product")
+      setError(err instanceof Error ? err.message : "Failed to save product")
     }
   }
 
-  const handleInputChange = (field: string, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+  type InputValue = string | number | boolean;
+
+  const handleInputChange = (field: string, value: InputValue) => {
+    setFormData((prev) => {
+      // Handle category selection
+      if (field === 'category_id') {
+        // If value is a category name, convert it to ID
+        const categoryId = typeof value === 'string'
+          ? getCategoryIdByName(categories, value)
+          : value.toString()
+        console.log(`Setting category: name=${value}, id=${categoryId}`)
+        return { ...prev, [field]: categoryId }
+      }
+
+      // Handle supplier selection
+      if (field === 'supplier_id') {
+        return { ...prev, [field]: value || '' }
+      }
+
+      // Handle numeric fields
+      if (field.includes('price') ||
+        field.includes('quantity') ||
+        field.includes('stock_level')) {
+        const numericValue = value === '' ? '0' : value.toString()
+        return { ...prev, [field]: numericValue }
+      }
+
+      // Handle boolean fields
+      if (typeof value === 'boolean') {
+        return { ...prev, [field]: value }
+      }
+
+      // Handle all other fields
+      return { ...prev, [field]: value }
+    })
   }
 
   return (
@@ -147,8 +239,8 @@ export function ProductForm({ product, onSubmit, onCancel, loading = false }: Pr
                   id="realPrice"
                   type="number"
                   step="0.01"
-                  value={formData.realPrice}
-                  onChange={(e) => handleInputChange("realPrice", e.target.value)}
+                  value={formData.real_price}
+                  onChange={(e) => handleInputChange("real_price", e.target.value)}
                   placeholder="0.00"
                   required
                 />
@@ -159,8 +251,8 @@ export function ProductForm({ product, onSubmit, onCancel, loading = false }: Pr
                   id="purchasePrice"
                   type="number"
                   step="0.01"
-                  value={formData.purchasePrice}
-                  onChange={(e) => handleInputChange("purchasePrice", e.target.value)}
+                  value={formData.purchase_price}
+                  onChange={(e) => handleInputChange("purchase_price", e.target.value)}
                   placeholder="0.00"
                   required
                 />
@@ -171,8 +263,8 @@ export function ProductForm({ product, onSubmit, onCancel, loading = false }: Pr
                   id="sellingPrice"
                   type="number"
                   step="0.01"
-                  value={formData.sellingPrice}
-                  onChange={(e) => handleInputChange("sellingPrice", e.target.value)}
+                  value={formData.selling_price}
+                  onChange={(e) => handleInputChange("selling_price", e.target.value)}
                   placeholder="0.00"
                   required
                 />
@@ -183,8 +275,8 @@ export function ProductForm({ product, onSubmit, onCancel, loading = false }: Pr
                   id="priceCorrection"
                   type="number"
                   step="0.01"
-                  value={formData.priceCorrection}
-                  onChange={(e) => handleInputChange("priceCorrection", e.target.value)}
+                  value={formData.price_correction}
+                  onChange={(e) => handleInputChange("price_correction", e.target.value)}
                   placeholder="0.00"
                 />
               </div>
@@ -205,8 +297,8 @@ export function ProductForm({ product, onSubmit, onCancel, loading = false }: Pr
                 <Input
                   id="stockQuantity"
                   type="number"
-                  value={formData.stockQuantity}
-                  onChange={(e) => handleInputChange("stockQuantity", e.target.value)}
+                  value={formData.stock_quantity}
+                  onChange={(e) => handleInputChange("stock_quantity", e.target.value)}
                   placeholder="0"
                   required
                 />
@@ -216,8 +308,8 @@ export function ProductForm({ product, onSubmit, onCancel, loading = false }: Pr
                 <Input
                   id="minStockLevel"
                   type="number"
-                  value={formData.minStockLevel}
-                  onChange={(e) => handleInputChange("minStockLevel", e.target.value)}
+                  value={formData.min_stock_level}
+                  onChange={(e) => handleInputChange("min_stock_level", e.target.value)}
                   placeholder="0"
                   required
                 />
@@ -227,8 +319,8 @@ export function ProductForm({ product, onSubmit, onCancel, loading = false }: Pr
                 <Input
                   id="maxStockLevel"
                   type="number"
-                  value={formData.maxStockLevel}
-                  onChange={(e) => handleInputChange("maxStockLevel", e.target.value)}
+                  value={formData.max_stock_level}
+                  onChange={(e) => handleInputChange("max_stock_level", e.target.value)}
                   placeholder="Optional"
                 />
               </div>
@@ -240,14 +332,18 @@ export function ProductForm({ product, onSubmit, onCancel, loading = false }: Pr
             <h3 className="text-lg font-medium">Category & Supplier</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select value={formData.categoryId} onValueChange={(value) => handleInputChange("categoryId", value)}>
+                <Label htmlFor="category">Category *</Label>
+                <Select
+                  value={categories.find(c => c.id === formData.category_id)?.name || ''}
+                  onValueChange={(name) => handleInputChange("category_id", name)}
+                  required
+                >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
+                      <SelectItem key={category.id} value={category.name}>
                         {category.name}
                       </SelectItem>
                     ))}
@@ -256,7 +352,7 @@ export function ProductForm({ product, onSubmit, onCancel, loading = false }: Pr
               </div>
               <div className="space-y-2">
                 <Label htmlFor="supplier">Supplier</Label>
-                <Select value={formData.supplierId} onValueChange={(value) => handleInputChange("supplierId", value)}>
+                <Select value={formData.supplier_id} onValueChange={(value) => handleInputChange("supplier_id", value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select supplier" />
                   </SelectTrigger>

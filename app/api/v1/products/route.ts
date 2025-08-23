@@ -1,105 +1,41 @@
 import { type NextRequest, NextResponse } from "next/server"
-import type { Product } from "@/lib/types"
-
-// Mock data for development - replace with Supabase queries later
-const mockProducts: Product[] = [
-  {
-    id: "1",
-    name: "Wireless Headphones",
-    sku: "WH-001",
-    description: "High-quality wireless headphones with noise cancellation",
-    category: "Electronics",
-    supplier: "TechCorp",
-    realPrice: 150.0,
-    purchasePrice: 80.0,
-    sellingPrice: 120.0,
-    priceCorrection: 0,
-    stock: 25,
-    minStock: 5,
-    maxStock: 100,
-    createdAt: new Date("2024-01-15"),
-    updatedAt: new Date("2024-01-20"),
-  },
-  {
-    id: "2",
-    name: "Gaming Mouse",
-    sku: "GM-002",
-    description: "Ergonomic gaming mouse with RGB lighting",
-    category: "Electronics",
-    supplier: "GameGear",
-    realPrice: 80.0,
-    purchasePrice: 45.0,
-    sellingPrice: 65.0,
-    priceCorrection: 5.0,
-    stock: 15,
-    minStock: 3,
-    maxStock: 50,
-    createdAt: new Date("2024-01-10"),
-    updatedAt: new Date("2024-01-18"),
-  },
-  {
-    id: "3",
-    name: "Office Chair",
-    sku: "OC-003",
-    description: "Comfortable ergonomic office chair",
-    category: "Furniture",
-    supplier: "OfficeMax",
-    realPrice: 300.0,
-    purchasePrice: 180.0,
-    sellingPrice: 250.0,
-    priceCorrection: -10.0,
-    stock: 8,
-    minStock: 2,
-    maxStock: 20,
-    createdAt: new Date("2024-01-05"),
-    updatedAt: new Date("2024-01-22"),
-  },
-]
+import { createClient } from "@supabase/supabase-js"
+import { supabase } from "@/lib/supabase"
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const search = searchParams.get("search")
-    const category = searchParams.get("category")
-    const supplier = searchParams.get("supplier")
-    const lowStock = searchParams.get("lowStock")
+    const categoryId = searchParams.get("categoryId")
+    const sortBy = searchParams.get("sortBy") || "name"
+    const order = searchParams.get("order") || "asc"
+    const page = parseInt(searchParams.get("page") || "1")
+    const limit = parseInt(searchParams.get("limit") || "10")
 
-    let filteredProducts = [...mockProducts]
+    let query = supabase
+      .from('products')
+      .select('*, categories(*)', { count: 'exact' })
 
-    // Apply filters
     if (search) {
-      filteredProducts = filteredProducts.filter(
-        (product) =>
-          product.name.toLowerCase().includes(search.toLowerCase()) ||
-          product.sku.toLowerCase().includes(search.toLowerCase()),
-      )
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
     }
 
-    if (category) {
-      filteredProducts = filteredProducts.filter((product) => product.category.toLowerCase() === category.toLowerCase())
+    if (categoryId) {
+      query = query.eq('category_id', categoryId)
     }
 
-    if (supplier) {
-      filteredProducts = filteredProducts.filter((product) => product.supplier.toLowerCase() === supplier.toLowerCase())
-    }
+    const { data: products, error, count } = await query
+      .order(sortBy, { ascending: order === 'asc' })
+      .range((page - 1) * limit, page * limit - 1)
 
-    if (lowStock === "true") {
-      filteredProducts = filteredProducts.filter((product) => product.stock <= product.minStock)
-    }
-
-    // Add calculated fields
-    const productsWithCalculations = filteredProducts.map((product) => ({
-      ...product,
-      totalProfit: product.sellingPrice + product.priceCorrection - product.purchasePrice,
-      profitMargin:
-        ((product.sellingPrice + product.priceCorrection - product.purchasePrice) / product.purchasePrice) * 100,
-      finalPrice: product.sellingPrice + product.priceCorrection,
-    }))
+    if (error) throw error
 
     return NextResponse.json({
       success: true,
-      data: productsWithCalculations,
-      total: productsWithCalculations.length,
+      data: products,
+      total: count,
+      page,
+      limit,
     })
   } catch (error) {
     console.error("Error fetching products:", error)
@@ -109,47 +45,60 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
+    const productData = await request.json()
+
+    console.log("Creating product with data:", productData)
 
     // Validate required fields
-    const requiredFields = ["name", "sku", "category", "supplier", "purchasePrice", "sellingPrice"]
-    for (const field of requiredFields) {
-      if (!body[field]) {
-        return NextResponse.json({ success: false, error: `Missing required field: ${field}` }, { status: 400 })
-      }
+    if (!productData.name?.trim()) {
+      return NextResponse.json({
+        success: false,
+        error: "Name is required"
+      }, { status: 400 })
     }
 
-    const newProduct: Product = {
-      id: Date.now().toString(), // In real app, this would be generated by database
-      name: body.name,
-      sku: body.sku,
-      description: body.description || "",
-      category: body.category,
-      supplier: body.supplier,
-      realPrice: body.realPrice || body.sellingPrice,
-      purchasePrice: body.purchasePrice,
-      sellingPrice: body.sellingPrice,
-      priceCorrection: body.priceCorrection || 0,
-      stock: body.stock || 0,
-      minStock: body.minStock || 0,
-      maxStock: body.maxStock || 100,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+    if (!productData.category_id) {
+      return NextResponse.json({
+        success: false,
+        error: "Category is required"
+      }, { status: 400 })
     }
 
-    // In real app, save to database here
-    mockProducts.push(newProduct)
+    // Remove any computed or read-only fields
+    delete productData.id
+    delete productData.created_at
+    delete productData.updated_at
+    delete productData.total_profit
+    delete productData.category
+    delete productData.supplier
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: newProduct,
-        message: "Product created successfully",
-      },
-      { status: 201 },
-    )
+    // Insert the new product
+    const { data: product, error } = await supabase
+      .from('products')
+      .insert([{
+        ...productData,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }])
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Supabase error:", error)
+      throw error
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: product,
+      message: "Product created successfully"
+    })
+
   } catch (error) {
     console.error("Error creating product:", error)
-    return NextResponse.json({ success: false, error: "Failed to create product" }, { status: 500 })
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to create product"
+    }, { status: 500 })
   }
 }
