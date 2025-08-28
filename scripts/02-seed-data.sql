@@ -106,3 +106,24 @@ INSERT INTO stock_movements (product_id, movement_type, quantity, reference_numb
   'SALE-001',
   'Sold to customer'
 );
+
+-- Insert sample warranties
+INSERT INTO warranties (product_id, customer_name, customer_email, purchase_date, warranty_period_months) VALUES
+(
+  (SELECT id FROM products WHERE sku = 'WBH-001'),
+  'Alice Johnson',
+  'alice.j@example.com',
+  '2024-05-01',
+  12
+),
+(
+  (SELECT id FROM products WHERE sku = 'CTS-BLU-001'),
+  'Bob Williams',
+  'bob.w@example.com',
+  '2024-04-15',
+  6
+);
+
+-- Insert sample warranty payments
+INSERT INTO warranty_payments (warranty_id, amount, payment_method, transaction_id)
+SELECT id, 10.00, 'Credit Card', 'txn_12345abcde' FROM warranties WHERE customer_email = 'alice.j@example.com';

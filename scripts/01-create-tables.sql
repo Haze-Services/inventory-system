@@ -82,3 +82,39 @@ CREATE INDEX IF NOT EXISTS idx_products_supplier ON products(supplier_id);
 CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements(product_id);
 CREATE INDEX IF NOT EXISTS idx_stock_movements_date ON stock_movements(created_at);
+
+-- Warranties table
+CREATE TABLE IF NOT EXISTS warranties (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  customer_name VARCHAR(255) NOT NULL,
+  customer_email VARCHAR(255),
+  customer_phone VARCHAR(50),
+  purchase_date DATE NOT NULL,
+  warranty_period_months INTEGER NOT NULL,
+  expiry_date DATE GENERATED ALWAYS AS (purchase_date + (warranty_period_months * INTERVAL '1 month')) STORED,
+  status VARCHAR(50) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired', 'claimed', 'void')),
+  notes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Warranty Payments table
+CREATE TABLE IF NOT EXISTS warranty_payments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  warranty_id UUID NOT NULL REFERENCES warranties(id) ON DELETE CASCADE,
+  amount DECIMAL(10, 2) NOT NULL,
+  payment_method VARCHAR(50) NOT NULL,
+  transaction_id VARCHAR(255),
+  payment_date TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  status VARCHAR(50) NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'pending', 'failed')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for warranties
+CREATE INDEX IF NOT EXISTS idx_warranties_product_id ON warranties(product_id);
+CREATE INDEX IF NOT EXISTS idx_warranties_customer_email ON warranties(customer_email);
+CREATE INDEX IF NOT EXISTS idx_warranties_expiry_date ON warranties(expiry_date);
+
+-- Indexes for warranty_payments
+CREATE INDEX IF NOT EXISTS idx_warranty_payments_warranty_id ON warranty_payments(warranty_id);

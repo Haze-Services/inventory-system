@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { MoreHorizontal, Search, Plus, Edit, Trash2 } from "lucide-react"
+import { MoreHorizontal, Search, Plus, Edit, Trash2, ShieldCheck } from "lucide-react"
 import type { Product } from "@/lib/types"
+import { useRouter } from "next/navigation"
 
 interface ProductsTableProps {
   products: Product[]
@@ -19,6 +20,7 @@ interface ProductsTableProps {
 
 export function ProductsTable({ products, onEdit, onDelete, onAdd, loading = false }: ProductsTableProps) {
   const [searchTerm, setSearchTerm] = useState("")
+  const router = useRouter()
 
   const filteredProducts = products.filter(
     (product) =>
@@ -117,7 +119,7 @@ export function ProductsTable({ products, onEdit, onDelete, onAdd, loading = fal
                     <TableCell>
                       <div className="text-sm">
                         <div>{product.stock_quantity} units</div>
-                        <div className="text-muted-foreground">Min: {product.minStockLevel}</div>
+                        <div className="text-muted-foreground">Min: {product.min_stock_level}</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -134,6 +136,10 @@ export function ProductsTable({ products, onEdit, onDelete, onAdd, loading = fal
                           <DropdownMenuItem onClick={() => onEdit(product)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/warranties/register?productId=${product.id}`)}>
+                            <ShieldCheck className="h-4 w-4 mr-2" />
+                            Register Warranty
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => onDelete(product)} className="text-destructive">
                             <Trash2 className="h-4 w-4 mr-2" />

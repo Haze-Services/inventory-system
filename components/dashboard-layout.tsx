@@ -20,6 +20,7 @@ import {
   LogOut,
   User,
   DollarSign,
+  ShieldCheck
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
@@ -31,6 +32,7 @@ const navigation = [
   { name: "Categories", href: "/dashboard/categories", icon: Users },
   { name: "Pricing", href: "/dashboard/pricing", icon: DollarSign },
   { name: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
+  { name: "Warranties", href: "/dashboard/warranties", icon: ShieldCheck },
   { name: "Settings", href: "/dashboard/settings", icon: Settings },
 ]
 
