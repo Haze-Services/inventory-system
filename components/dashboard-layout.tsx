@@ -20,7 +20,8 @@ import {
   LogOut,
   User,
   DollarSign,
-  ShieldCheck
+  ShieldCheck,
+  ShoppingCart
 } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
@@ -28,6 +29,7 @@ import { cn } from "@/lib/utils"
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Products", href: "/dashboard/products", icon: Package },
+  { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
   { name: "Suppliers", href: "/dashboard/suppliers", icon: Building2 },
   { name: "Categories", href: "/dashboard/categories", icon: Users },
   { name: "Pricing", href: "/dashboard/pricing", icon: DollarSign },
