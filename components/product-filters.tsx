@@ -31,7 +31,7 @@ export function ProductFilters({ onFiltersChange, categories, suppliers }: Produ
 
     // Convert UI filters to API filters
     const apiFilters: any = {
-      search: newFilters.search || undefined,
+      search: newFilters.search === "" ? "" : newFilters.search || undefined,
       category: newFilters.category || undefined,
       supplier: newFilters.supplier || undefined,
       sortBy: newFilters.sortBy,

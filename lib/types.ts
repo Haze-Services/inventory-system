@@ -66,3 +66,30 @@ export interface WarrantyPayment {
   status: "completed" | "pending" | "failed"
   created_at: string
 }
+
+export interface Order {
+  id: string
+  order_number: string
+  supplier_id: string
+  supplier?: Supplier
+  status: "pending" | "confirmed" | "shipped" | "delivered" | "cancelled"
+  order_date: string
+  expected_delivery_date?: string
+  actual_delivery_date?: string
+  total_amount: number
+  notes?: string
+  created_at: string
+  updated_at: string
+  items?: OrderItem[]
+}
+
+export interface OrderItem {
+  id: string
+  order_id: string
+  product_id: string
+  product?: Product
+  quantity: number
+  unit_price: number
+  total_price: number
+  created_at: string
+}

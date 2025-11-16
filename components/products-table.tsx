@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { MoreHorizontal, Search, Plus, Edit, Trash2, ShieldCheck } from "lucide-react"
+import { MoreHorizontal, Search, Plus, Edit, Trash2, ShieldCheck, ShoppingCart } from "lucide-react"
 import type { Product } from "@/lib/types"
 import { useRouter } from "next/navigation"
 
@@ -136,6 +136,10 @@ export function ProductsTable({ products, onEdit, onDelete, onAdd, loading = fal
                           <DropdownMenuItem onClick={() => onEdit(product)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/orders/new?productId=${product.id}`)}>
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Create Order
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => router.push(`/dashboard/warranties/register?productId=${product.id}`)}>
                             <ShieldCheck className="h-4 w-4 mr-2" />
