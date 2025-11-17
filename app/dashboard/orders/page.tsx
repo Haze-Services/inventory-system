@@ -12,7 +12,7 @@ import { Order } from "@/lib/types"
 
 const statusColors = {
   pending: "bg-yellow-100 text-yellow-800",
-  confirmed: "bg-blue-100 text-blue-800", 
+  confirmed: "bg-blue-100 text-blue-800",
   shipped: "bg-purple-100 text-purple-800",
   delivered: "bg-green-100 text-green-800",
   cancelled: "bg-red-100 text-red-800"
@@ -42,19 +42,19 @@ export default function OrdersPage() {
       if (search) params.append("search", search)
       if (statusFilter) params.append("status", statusFilter)
       if (supplierFilter) params.append("supplierId", supplierFilter)
-      
+
       const response = await fetch(`/api/v1/orders?${params}`)
       const result = await response.json()
-      
+
       if (result.success) {
         setOrders(result.data)
-        
+
         // Calculate stats
         const total = result.data.length
         const pending = result.data.filter((o: Order) => o.status === 'pending').length
         const confirmed = result.data.filter((o: Order) => o.status === 'confirmed').length
         const delivered = result.data.filter((o: Order) => o.status === 'delivered').length
-        
+
         setStats({ total, pending, confirmed, delivered })
       }
     } catch (error) {
@@ -167,7 +167,7 @@ export default function OrdersPage() {
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Status</SelectItem>
+                <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="confirmed">Confirmed</SelectItem>
                 <SelectItem value="shipped">Shipped</SelectItem>
@@ -175,7 +175,7 @@ export default function OrdersPage() {
                 <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
-            <Button 
+            <Button
               variant="outline"
               onClick={() => {
                 setSearch("")
